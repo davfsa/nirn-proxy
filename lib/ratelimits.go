@@ -243,7 +243,12 @@ func (b *BucketRateLimit) Update(bucket string, remaining, limit int64, resetAt,
 	}
 
 	if b.bucket != bucket {
-		if limit != b.limit {
+		// 05.01.2026
+		// Discord started randomly sending changing the DELETE /channels/!/messages/! endoint
+		// from a 5 limit to 3 limit, every other request.
+		//
+		// Until this is fixed, just ignore that change 
+		if limit != b.limit && !(b.limit == 5 && limit == 3) {
 			logger.WithFields(logrus.Fields{
 				"oldBucket":     b.bucket,
 				"newBucket":     bucket,
@@ -283,6 +288,7 @@ func (b *BucketRateLimit) Update(bucket string, remaining, limit int64, resetAt,
 		b.ratelimitAvoidance = true
 		_, increaseAt := calculateFixedWindow(resetAt, resetAfter)
 		b.increaseAt = increaseAt
+		b.limit = limit
 		b.remaining = 0
 		return
 	}
