@@ -139,8 +139,6 @@ func GetOptimisticBucketPath(url string, method string) string {
 
 				if diff >= 14*24*time.Hour {
 					bucket.WriteString("/!14dmsg")
-				} else if diff < 10*time.Second {
-					bucket.WriteString("/!10smsg")
 				} else {
 					bucket.WriteString("/!")
 				}

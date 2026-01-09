@@ -219,6 +219,8 @@ func (b *Bucket) Update(remaining, limit int64, resetAt, resetAfter float64, rat
 		return
 	}
 
+	b.serverUpdateAt = serverUpdateAt
+
 	if b.firstSeen && !b.outOfSync && remaining > 0 && remaining != limit-1 {
 		resetAtEq := isClose(b.resetAt, resetAt, 0.05)
 		b.firstSeen = false
@@ -245,7 +247,7 @@ func (b *Bucket) Update(remaining, limit int64, resetAt, resetAfter float64, rat
 		}
 	}
 
-	b.serverUpdateAt = serverUpdateAt
+	b.resetAt = resetAt
 
 	if ratelimitHit {
 		// During ratelimit avoidance, we will treat the bucket as fixed

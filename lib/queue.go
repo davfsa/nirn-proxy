@@ -202,7 +202,7 @@ func (q *RequestQueue) sweepBuckets() {
 	logger.Debug("Buckets sweep start")
 	sweptEntries := 0
 	for key, val := range q.buckets {
-		if time.Since(val.serverUpdateAt) > 3*val.period {
+		if val.inTransit == 0 && time.Since(val.serverUpdateAt) > 3*val.period {
 			delete(q.buckets, key)
 			sweptEntries++
 		}
@@ -463,7 +463,7 @@ func (q *RequestQueue) doRequest(ctx context.Context, item *QueueItem, ch *Queue
 				"identifier": q.identifier,
 				"route":      item.Req.URL.String(),
 				"method":     item.Req.Method,
-			}).Info("creating new bucket")
+			}).Debug("creating new bucket")
 
 			q.buckets[bucketHash] = NewBucket(bucketHash, remaining, limit, resetAt, resetAfter)
 		} else {
@@ -476,7 +476,7 @@ func (q *RequestQueue) doRequest(ctx context.Context, item *QueueItem, ch *Queue
 				"identifier": q.identifier,
 				"route":      item.Req.URL.String(),
 				"method":     item.Req.Method,
-			}).Info("updating existing bucket")
+			}).Debug("updating existing bucket")
 
 			bucket.Update(remaining, limit, resetAt, resetAfter, ratelimitHit)
 		}
@@ -489,7 +489,7 @@ func (q *RequestQueue) doRequest(ctx context.Context, item *QueueItem, ch *Queue
 				"identifier": q.identifier,
 				"route":      item.Req.URL.String(),
 				"method":     item.Req.Method,
-			}).Info("linking new bucket to route")
+			}).Debug("linking new bucket to route")
 
 			ch.buckets = append(ch.buckets, bucketHash)
 		}
@@ -588,6 +588,7 @@ func (q *RequestQueue) subscribe(ch *QueueChannel, path string, pathHashInt uint
 
 		if buckets != nil {
 			if err = buckets.Acquire(ctx); err != nil {
+				bucketsContextManagerPool.Put(buckets)
 				item.errChan <- err
 				continue
 			}
