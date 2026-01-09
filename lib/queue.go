@@ -373,14 +373,14 @@ func isInteraction(url string) bool {
 }
 
 func (q *RequestQueue) getBucketsContextManager(ch *QueueChannel) *bucketsContextManager {
+	q.Lock()
+	defer q.Unlock()
 	ch.Lock()
 	defer ch.Unlock()
+
 	if len(ch.buckets) == 0 {
 		return nil
 	}
-
-	q.Lock()
-	defer q.Unlock()
 
 	contextManager := bucketsContextManagerPool.Get().(*bucketsContextManager)
 	contextManager.buckets = contextManager.buckets[:0]
