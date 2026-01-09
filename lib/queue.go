@@ -17,7 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// A pool of bucketContextManager
+// A pool of bucketsContextManager
 var bucketsContextManagerPool = sync.Pool{
 	New: func() interface{} {
 		return &bucketsContextManager{
@@ -65,7 +65,6 @@ func (b *bucketsContextManager) Release() {
 }
 
 type ItemProcessFunction func(ctx context.Context, item *QueueItem) (*http.Response, error)
-type AcquireBucketsFunction func(ctx context.Context, path string)
 
 type QueueItem struct {
 	Req      *http.Request
@@ -394,6 +393,11 @@ func (q *RequestQueue) getBucketsContextManager(ch *QueueChannel) *bucketsContex
 
 		// The bucket no longer exists, so remove it from the channel slice
 		ch.buckets = append(ch.buckets[:idx], ch.buckets[idx+1:]...)
+	}
+
+	if len(contextManager.buckets) == 0 {
+		bucketsContextManagerPool.Put(contextManager)
+		return nil
 	}
 
 	return contextManager

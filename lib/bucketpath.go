@@ -3,6 +3,7 @@ package lib
 import (
 	"encoding/base64"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -129,12 +130,27 @@ func GetOptimisticBucketPath(url string, method string) string {
 	// In this loop, we only need to strip all remaining snowflakes, emoji names and webhook tokens(optional)
 	parts = parts[2:]
 
-	for _, part := range parts {
+	for idx, part := range parts {
 		if IsSnowflake(part) {
+			//Custom rule for message DELETES older than 14d
+			if currMajor == MajorChannels && idx == len(parts)-1 && parts[idx-1] == "messages" && method == "DELETE" {
+				createdAt, _ := GetSnowflakeCreatedAt(part)
+				diff := time.Now().Sub(createdAt)
+
+				if diff >= 14*24*time.Hour {
+					bucket.WriteString("/!14dmsg")
+				} else if diff < 10*time.Second {
+					bucket.WriteString("/!10smsg")
+				} else {
+					bucket.WriteString("/!")
+				}
+				continue
+			}
+
 			bucket.WriteString("/!")
 			continue
 		}
-	
+
 		if currMajor == MajorChannels && part == "reactions" {
 			// reaction put/delete fall under a different bucket from other reaction endpoints
 			if method == "PUT" || method == "DELETE" {
